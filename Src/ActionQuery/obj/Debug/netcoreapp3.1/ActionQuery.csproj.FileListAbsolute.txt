@@ -1,0 +1,9 @@
+E:\Git\ActionQuery\Src\ActionQuery\obj\Debug\netcoreapp3.1\ActionQuery.csprojAssemblyReference.cache
+E:\Git\ActionQuery\Src\ActionQuery\obj\Debug\netcoreapp3.1\ActionQuery.AssemblyInfoInputs.cache
+E:\Git\ActionQuery\Src\ActionQuery\obj\Debug\netcoreapp3.1\ActionQuery.AssemblyInfo.cs
+E:\Git\ActionQuery\Src\ActionQuery\obj\Debug\netcoreapp3.1\ActionQuery.csproj.CoreCompileInputs.cache
+E:\Git\ActionQuery\Src\ActionQuery\bin\Debug\netcoreapp3.1\ActionQuery.deps.json
+E:\Git\ActionQuery\Src\ActionQuery\bin\Debug\netcoreapp3.1\ActionQuery.dll
+E:\Git\ActionQuery\Src\ActionQuery\bin\Debug\netcoreapp3.1\ActionQuery.pdb
+E:\Git\ActionQuery\Src\ActionQuery\obj\Debug\netcoreapp3.1\ActionQuery.dll
+E:\Git\ActionQuery\Src\ActionQuery\obj\Debug\netcoreapp3.1\ActionQuery.pdb
