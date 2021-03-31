@@ -14,37 +14,44 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
             space = 1,
             // special literals for specific values - true, false, null, value
             specialliteral = 2,
+            // Operator from the langlet
+            keyword = 3,
             // identifier - function name or parameter name to fetch (the actual fetching depends on the usage)
-            identifier = 3,
+            identifier = 4,
             // Open normal bracket (function call arguments, grouping is not supported intentionally - see the docs for more details)
-            openbracket = 4,
+            openbracket = 5,
             // close normal bracket - end of function call argument list.
-            closebracket = 5,
+            closebracket = 6,
             // string literal 'something'
-            stringliteral = 6,
+            stringliteral = 7,
             // numeric literal like: 124, +234, -324, 123.45, -2.43, +0.23423 etc.
-            numliteral = 7,
+            numliteral = 8,
             // comma separator of arguments. can be used at top level also, in this case this will produce multiple results (usable only with the corresponding evaluation routines)
-            comma = 8,
+            comma = 9,
             // end of the expression
-            end = 9
+            end = 10,
+            // Virtual tokens ===
+            compound = 101
         }
-        private static readonly Regex _regex = new Regex(@"(\s+)|(true|false|null)|([a-zA-Z_\-][a-zA-Z0-9_\.]*)|(\()|(\))|(?:\'((?:\\'|[^\'])*)\')|([\+\-]?\d+(?:\.\d*)?)|(\,|(?:\r|\n)+)|($)",
+        private static readonly Regex _regex = new Regex(@"(\s+)|(true|false|null)|(while|if)|([a-zA-Z_\-][a-zA-Z0-9_\.]*)|(\()|(\))|(?:\'((?:\\'|[^\'])*)\')|([\+\-]?\d+(?:\.\d*)?)|(\,|(?:\r|\n)+)|($)",
             RegexOptions.None);
 
 
         private struct OpEntry {
-            internal OpEntry(string v, Terms t,int p = -1) {
+            internal OpEntry(string v, Terms t,int pos = -1) {
                 Value = v;
                 Term = t;
-                Pos = p;
+                Pos = pos;
                 Arguments = 0;
+                Addresses = new List<int>();
             }
             internal string Value;
             internal Terms Term;
             internal int Pos;
 
             internal int Arguments;
+
+            internal List<int> Addresses;
 
             public bool IsEmpty { get {
                 return (Term == Terms.none);
@@ -74,10 +81,11 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
             } 
             return fmt;
         }
-        private void AddArg(Stack<OpEntry> stack) {
+        private void AddArg(Stack<OpEntry> stack, ActionQueryRunner<ResolverValue>.Constructor constr) {
             if (stack.Count > 0) {
                 var entry = stack.Peek();
                 entry.Arguments ++;
+                entry.Addresses.Add(constr.Address);
             }
         }
         #endregion
@@ -100,6 +108,12 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                         if (match.Groups[i].Success) {
                             string curval = match.Groups[i].Value;
                             switch ((Terms)i) {
+                                case Terms.keyword:
+                                    if (!undecided.IsEmpty) {
+                                        return runner.Complete(ReportError("Syntax error at {0}.", match));
+                                    }
+                                    undecided = new OpEntry(curval, Terms.keyword, match.Index);
+                                goto nextTerm;
                                 case Terms.identifier:
                                     if (!undecided.IsEmpty) {
                                         return runner.Complete(ReportError("Syntax error at {0}.", match));
@@ -110,6 +124,12 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                     if (undecided.Term == Terms.identifier) {
                                         opstack.Push(undecided); // Function call
                                         undecided = OpEntry.Empty;
+                                    } else if (undecided.Term == Terms.keyword) {
+                                        undecided.Addresses.Add(runner.Address);
+                                        opstack.Push(undecided);
+                                        undecided = OpEntry.Empty;
+                                    } else if (undecided.IsEmpty) {
+                                        opstack.Push(new OpEntry(null, Terms.compound,match.Index));
                                     }
                                     level ++;
                                 goto nextTerm;
@@ -117,13 +137,18 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                     if (undecided.Term == Terms.identifier) {
                                         runner.Add(new Instruction(Instructions.PushParam,undecided.Value));
                                         undecided = OpEntry.Empty;
-                                        AddArg(opstack);
+                                        AddArg(opstack, runner);
                                     }
                                     // *** Function call
                                     if (opstack.Count == 0) return runner.Complete(ReportError("Syntax error - function call has no function name at {0}",match));
                                     entry = opstack.Pop();
                                     if (entry.Term == Terms.identifier) {
                                         runner.Add(new Instruction(Instructions.Call, entry.Value,entry.Arguments));
+                                        AddArg(opstack, runner);
+                                    } else if (entry.Term == Terms.keyword) {
+                                        AddArg(opstack, runner);
+                                        // TODO: Operator completion
+
                                     } else {
                                         return runner.Complete(ReportError("Syntax error - function call has no function name at {0}",match));
                                     }
@@ -133,9 +158,15 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                     if (undecided.Term == Terms.identifier) {
                                         runner.Add(new Instruction(Instructions.PushParam, undecided.Value));
                                         undecided = OpEntry.Empty;
-                                        AddArg(opstack);
+                                        AddArg(opstack, runner);
                                     } else if (!undecided.IsEmpty) { // If this happend it will be our mistake. Nothing but identifiers should appear in the undecided
                                         return runner.Complete(ReportError("Internal error at {0}",undecided.Pos));
+                                    }
+                                    // TODO: Consider root level behavior! Multiple results may be useful?
+                                    if (opstack.Count == 0 || opstack.Peek().Term == Terms.compound) {
+                                        // A coma in compond operator or on root level - only the last one must remain in the stack
+                                        // For this reason we dump the last entry.
+                                        
                                     }
                                 goto nextTerm;
                                 case Terms.numliteral:

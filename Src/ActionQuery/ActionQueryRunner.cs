@@ -28,6 +28,11 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                 _instructions.Add(instruction);
                 return this;
             }
+            public int Address {
+                get {
+                    return _instructions.Count;
+                }
+            }
             public ActionQueryRunner<ResolverValue> Complete(string err = null) {
                 if (err != null) {
                     return new ActionQueryRunner<ResolverValue>(err);

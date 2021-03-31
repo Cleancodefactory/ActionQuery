@@ -1,5 +1,6 @@
 using System;
 
+
 namespace Ccf.Ck.SysPlugins.Support.ActionQuery {
 
     public struct ActionQueryResult<ResolverValue> where ResolverValue: new() {
