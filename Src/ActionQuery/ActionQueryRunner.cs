@@ -28,6 +28,14 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                 _instructions.Add(instruction);
                 return this;
             }
+            public bool Update(int address, object operand) {
+                if (address >= 0 && address < _instructions.Count) {
+                    var instr =_instructions[address];
+                    instr.Operand = operand;
+                    _instructions[address] = instr;
+                }
+                return false;
+            }
             public int Address {
                 get {
                     return _instructions.Count;

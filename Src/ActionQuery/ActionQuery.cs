@@ -17,6 +17,7 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
             // Operator from the langlet
             keyword = 3,
             // identifier - function name or parameter name to fetch (the actual fetching depends on the usage)
+            // Addresses 0 - just found, 1 - end of first arg, last - 1 - last arg, last - after final element
             identifier = 4,
             // Open normal bracket (function call arguments, grouping is not supported intentionally - see the docs for more details)
             openbracket = 5,
@@ -44,6 +45,7 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                 Pos = pos;
                 Arguments = 0;
                 Addresses = new List<int>();
+                Op1Address = Op0Address = Op2Address = -1; // invalid
             }
             internal string Value;
             internal Terms Term;
@@ -52,6 +54,10 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
             internal int Arguments;
 
             internal List<int> Addresses;
+
+            internal int Op0Address; // The address of the start (while)
+            internal int Op1Address; // The address of the control jump instruction
+            internal int Op2Address; // The address of the second jump instruction (if else)
 
             public bool IsEmpty { get {
                 return (Term == Terms.none);
@@ -125,7 +131,7 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                         opstack.Push(undecided); // Function call
                                         undecided = OpEntry.Empty;
                                     } else if (undecided.Term == Terms.keyword) {
-                                        undecided.Addresses.Add(runner.Address);
+                                        undecided.Op0Address = runner.Address;
                                         opstack.Push(undecided);
                                         undecided = OpEntry.Empty;
                                     } else if (undecided.IsEmpty) {
@@ -148,6 +154,26 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                     } else if (entry.Term == Terms.keyword) {
                                         AddArg(opstack, runner);
                                         // TODO: Operator completion
+                                        if (entry.Value == "if") {
+                                            if (entry.Arguments == 2) {
+                                                // Update initial jumpIfNot
+                                                runner.Update(entry.Op1Address,runner.Address);
+                                            } else if (entry.Arguments == 3) {
+                                                // Update else unconditional jump
+                                                runner.Update(entry.Op2Address, runner.Address);
+                                            } else {
+                                                return runner.Complete(ReportError("if must have 2 or 3 arguments at {0}", match));
+                                            }
+                                        } else if (entry.Value == "while") {
+                                            if (entry.Arguments == 2) {
+                                                runner.Add(new Instruction(Instructions.Jump, entry.Op0Address));
+                                                runner.Update(entry.Op1Address, runner.Address);
+                                            } else {
+                                                return runner.Complete(ReportError("while must have 2 arguments at {0}", match));
+                                            }
+                                        } else {
+                                            return runner.Complete(ReportError("Unexpected end of control operator at {0}", match));
+                                        }
 
                                     } else {
                                         return runner.Complete(ReportError("Syntax error - function call has no function name at {0}",match));
@@ -166,7 +192,31 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                     if (opstack.Count == 0 || opstack.Peek().Term == Terms.compound) {
                                         // A coma in compond operator or on root level - only the last one must remain in the stack
                                         // For this reason we dump the last entry.
-                                        
+                                        runner.Add(new Instruction(Instructions.Dump, null));
+                                    } else if (opstack.Peek().Term == Terms.keyword) {
+                                        // TODO: operator midtime
+                                        entry = opstack.Peek();
+                                        if (entry.Arguments == 1) {
+                                            // We are at addr(1)
+                                            entry.Op1Address = runner.Address;
+                                            runner.Add(new Instruction(Instructions.JumpIfNot, -1, 1));
+                                        } else if (entry.Arguments == 2) {
+                                            if (entry.Op1Address >= 0) {
+                                                if (entry.Value == "if") {
+                                                    // Finish successful part
+                                                    entry.Op2Address = runner.Address;
+                                                    runner.Add(new Instruction(Instructions.Jump, -1));
+                                                    // Jump here if condition is not met
+                                                    runner.Update(entry.Op1Address, runner.Address);
+                                                } else if (entry.Value == "while") {
+                                                    return runner.Complete(ReportError("while has more than two arguments at {0}", match));
+                                                }
+                                                /// /////////////////////////
+                                                
+                                            } else {
+                                                return runner.Complete(ReportError("while or if operator cannot be composed correctly {0}",undecided.Pos));
+                                            }
+                                        }
                                     }
                                 goto nextTerm;
                                 case Terms.numliteral:
@@ -174,14 +224,14 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                     if (curval.IndexOf('.') >= 0) { // double
                                         if (double.TryParse(curval,NumberStyles.Any,CultureInfo.InvariantCulture, out double t)) {
                                             runner.Add(new Instruction(Instructions.PushDouble, t));
-                                            AddArg(opstack);
+                                            AddArg(opstack, runner);
                                         } else {
                                             return runner.Complete(ReportError("Invalid double number at {0}",match));
                                         }
                                     } else {
                                         if (int.TryParse(curval,NumberStyles.Any,CultureInfo.InvariantCulture, out int n)) {
                                             runner.Add(new Instruction(Instructions.PushInt,n));
-                                            AddArg(opstack);
+                                            AddArg(opstack, runner);
                                         } else {
                                             return runner.Complete(ReportError("Invalid integer number at {0}",match));
                                         }
@@ -198,14 +248,14 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                     } else {
                                         return runner.Complete(ReportError("Syntax error at {0}",match));
                                     }
-                                    AddArg(opstack);
+                                    AddArg(opstack, runner);
                                 goto nextTerm;
                                 case Terms.stringliteral:
                                     if (!undecided.IsEmpty) {
                                         return runner.Complete(ReportError("Syntax error at {0}", undecided.Pos));
                                     }
                                     runner.Add(new Instruction(Instructions.PushString,curval));
-                                    AddArg(opstack);
+                                    AddArg(opstack, runner);
                                 goto nextTerm;
                                 case Terms.space:
                                     // do nothing - we simply ignore the space
@@ -214,7 +264,7 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                     if (undecided.Term == Terms.identifier) {
                                         runner.Add(new Instruction(Instructions.PushParam, undecided.Value));
                                         undecided = OpEntry.Empty;
-                                        AddArg(opstack);
+                                        AddArg(opstack, runner);
                                     }
                                     if (opstack.Count == 0) {
                                         // The stack must be empty at this point

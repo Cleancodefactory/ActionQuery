@@ -12,6 +12,9 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery {
         PushNull = 5, // () - Pushes null on the stack
         PushBool = 6, // (bool) - Pushes a boolean on the stack
         PushString = 7, // (string) - pushes a string on the stack
-        Dump = 8 // () - Pulls and dumps (forgets) one entry from the stack
+        Dump = 8, // () - Pulls and dumps (forgets) one entry from the stack
+        JumpIfNot = 9, // (jumpaddress), 1 arg
+        Jump = 10 // (jumpaddress), 0 arg
+
     }
 }

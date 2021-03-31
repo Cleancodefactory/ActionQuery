@@ -6,7 +6,7 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery {
             ArgumentsCount = argcount;
         }
         public Instructions Operation {get; private set;}
-        public object Operand { get; private set;}
+        public object Operand;
         public int ArgumentsCount { get; private set;}
     }
 }
