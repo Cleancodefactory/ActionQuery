@@ -8,5 +8,11 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery {
         public Instructions Operation {get; private set;}
         public object Operand;
         public int ArgumentsCount { get; private set;}
+
+        public static Instruction Empty {
+            get {
+                return new Instruction(Instructions.NoOp, null,0);
+            }
+        }
     }
 }

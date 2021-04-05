@@ -157,7 +157,7 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                         if (entry.Value == "if") {
                                             if (entry.Arguments == 2) {
                                                 // Update initial jumpIfNot
-                                                runner.Update(entry.Op1Address,runner.Address);
+                                                runner.Update(entry.Op1Address, runner.Address);
                                             } else if (entry.Arguments == 3) {
                                                 // Update else unconditional jump
                                                 runner.Update(entry.Op2Address, runner.Address);
@@ -192,7 +192,7 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                     if (opstack.Count == 0 || opstack.Peek().Term == Terms.compound) {
                                         // A coma in compond operator or on root level - only the last one must remain in the stack
                                         // For this reason we dump the last entry.
-                                        runner.Add(new Instruction(Instructions.Dump, null));
+                                        runner.Add(new Instruction(Instructions.Dump, null, 1));
                                     } else if (opstack.Peek().Term == Terms.keyword) {
                                         // TODO: operator midtime
                                         entry = opstack.Peek();
@@ -210,9 +210,10 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                                     runner.Update(entry.Op1Address, runner.Address);
                                                 } else if (entry.Value == "while") {
                                                     return runner.Complete(ReportError("while has more than two arguments at {0}", match));
+                                                } else {
+                                                    // This is completely unexpected
+                                                    return runner.Complete(ReportError("syntax error at {0}", match));
                                                 }
-                                                /// /////////////////////////
-                                                
                                             } else {
                                                 return runner.Complete(ReportError("while or if operator cannot be composed correctly {0}",undecided.Pos));
                                             }
