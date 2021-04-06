@@ -1,5 +1,7 @@
 using System;
+using System.Text;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Ccf.Ck.SysPlugins.Support.ActionQuery
 {
@@ -8,8 +10,9 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
         private ActionQueryRunner(Instruction[] program) {
             _program = program;
         }
-        private ActionQueryRunner(string error) {
+        private ActionQueryRunner(string error, Instruction[] program) {
             ErrorText = error;
+            _program = program;
         }
         public bool IsValid {get { 
             return (ErrorText == null);
@@ -17,27 +20,72 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
         public string ErrorText { get; private set; }
         private Instruction[] _program = null;
         
+        #region Diagnostics
+
+        public string DumpProgram() {
+            return DumpProgram(_program);
+        }
+        public string DumpProgram(Instruction[] _instructions) {
+            StringBuilder sb = new StringBuilder();
+            if (_instructions != null) {
+                for (int i = 0; i < _instructions.Length; i++) {
+                    Instruction inst = _instructions[i];
+                    sb.AppendFormat("{0}: {1} [{2}] ({3})", i, inst.Operation.ToString(), inst.Operand, inst.ArgumentsCount);
+                    sb.AppendLine();
+                }
+            } else {
+                sb.AppendLine("[no program]");
+            }
+            return sb.ToString();
+        }
+        #endregion
+
+
         public ResolverValue[] Execute(IActionQueryHost<ResolverValue> host) {
             int pc = 0, i;
             Stack<ResolverValue> _datastack = new Stack<ResolverValue>();
-            List<ResolverValue> _args = new List<ResolverValue>();
+            //List<ResolverValue> _args = new List<ResolverValue>();
+            ResolverValue[] _args = new ResolverValue[16];
             ResolverValue val;
             Instruction instr = Instruction.Empty;
+            
             if (host == null) {
                 throw new AuctionQueryException<ResolverValue>("No host given to Execute", Instruction.Empty, null, 0);
             }
+            IActionQueryHostControl<ResolverValue> tracer = null;
+            if (host is IActionQueryHostControl<ResolverValue> tr) {
+                if (tr.StartTrace()) {
+                    tracer = tr;
+                }
+            }
+
             try {
                 while (pc < _program.Length) {
                     instr = _program[pc];
-                    _args.Clear();
                     if (_datastack.Count < instr.ArgumentsCount) {
                         throw new AuctionQueryException<ResolverValue>("Stack underflow", instr, _datastack.ToArray(), pc);
+                    } else if (instr.ArgumentsCount > 16) {
+                        throw new AuctionQueryException<ResolverValue>("Too many arguments, up to 16 are supported.", instr, _datastack.ToArray(), pc);
                     }
-                    for (i = 0; i <instr.ArgumentsCount;i++) {
-                        _args.Add(_datastack.Pop());
+                    for (i = instr.ArgumentsCount - 1; i >= 0;i--) {
+                        _args[i] = _datastack.Pop();
+                    }
+                    if (tracer != null) {
+                        if (!tracer.Step(pc, instr, _args, _datastack)) {
+                            return null;
+                        }
                     }
                     // The PC should be incremented after performing the instruction.
                     switch (instr.Operation) {
+                        case Instructions.Call:
+                            if (instr.Operand is string s) {
+                                val = host.CallProc(s, _args.Take(instr.ArgumentsCount).ToArray());
+                                _datastack.Push(val);
+                            } else {
+                                throw new AuctionQueryException<ResolverValue>("Call requires string operand.", instr, _datastack.ToArray(),pc);    
+                            }
+                            pc++;
+                            continue;
                         case Instructions.Jump:
                             if (instr.Operand is int x) {
                                 if (x >= 0 && x < _program.Length) {
@@ -52,7 +100,7 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                         case Instructions.JumpIfNot:
                             if (instr.Operand is int y) {
                                 if (y >= 0 && y < _program.Length) {
-                                    if (_args.Count > 0) {
+                                    if (instr.ArgumentsCount > 0) {
                                         val = _args[0];
                                         if (host.IsTruthyOrFalsy(val)) {
                                             pc++;
@@ -170,8 +218,9 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
             }
             public ActionQueryRunner<ResolverValue> Complete(string err = null) {
                 if (err != null) {
-                    return new ActionQueryRunner<ResolverValue>(err);
+                    return new ActionQueryRunner<ResolverValue>(err, _instructions.ToArray());
                 } else {
+                    Add(new Instruction(Instructions.NoOp)); // To accommodate jumps to the end.
                     return new ActionQueryRunner<ResolverValue>(_instructions.ToArray());
                 }
             }

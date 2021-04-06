@@ -34,17 +34,16 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
             // Virtual tokens ===
             compound = 101
         }
-        private static readonly Regex _regex = new Regex(@"(\s+)|(true|false|null)|(while|if)|([a-zA-Z_\-][a-zA-Z0-9_\.]*)|(\()|(\))|(?:\'((?:\\'|[^\'])*)\')|([\+\-]?\d+(?:\.\d*)?)|(\,|(?:\r|\n)+)|($)",
+        private static readonly Regex _regex = new Regex(@"(\s+)|(true|false|null)|(while|if)|([a-zA-Z_][a-zA-Z0-9_\.\-]*)|(\()|(\))|(?:\'((?:\\'|[^\'])*)\')|([\+\-]?\d+(?:\.\d*)?)|(\,|(?:\r|\n)+)|($)",
             RegexOptions.None);
 
 
-        private struct OpEntry {
+        private class OpEntry {
             internal OpEntry(string v, Terms t,int pos = -1) {
                 Value = v;
                 Term = t;
                 Pos = pos;
                 Arguments = 0;
-                Addresses = new List<int>();
                 Op1Address = Op0Address = Op2Address = -1; // invalid
             }
             internal string Value;
@@ -53,7 +52,7 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
 
             internal int Arguments;
 
-            internal List<int> Addresses;
+            
 
             internal int Op0Address; // The address of the start (while)
             internal int Op1Address; // The address of the control jump instruction
@@ -91,7 +90,7 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
             if (stack.Count > 0) {
                 var entry = stack.Peek();
                 entry.Arguments ++;
-                entry.Addresses.Add(constr.Address);
+
             }
         }
         #endregion
@@ -141,16 +140,17 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                 goto nextTerm;
                                 case Terms.closebracket:
                                     if (undecided.Term == Terms.identifier) {
+                                        AddArg(opstack, runner);
                                         runner.Add(new Instruction(Instructions.PushParam,undecided.Value));
                                         undecided = OpEntry.Empty;
-                                        AddArg(opstack, runner);
+                                        
                                     }
                                     // *** Function call
                                     if (opstack.Count == 0) return runner.Complete(ReportError("Syntax error - function call has no function name at {0}",match));
                                     entry = opstack.Pop();
                                     if (entry.Term == Terms.identifier) {
-                                        runner.Add(new Instruction(Instructions.Call, entry.Value,entry.Arguments));
                                         AddArg(opstack, runner);
+                                        runner.Add(new Instruction(Instructions.Call, entry.Value,entry.Arguments));
                                     } else if (entry.Term == Terms.keyword) {
                                         AddArg(opstack, runner);
                                         // TODO: Operator completion
@@ -174,7 +174,8 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                         } else {
                                             return runner.Complete(ReportError("Unexpected end of control operator at {0}", match));
                                         }
-
+                                    } else if (entry.Term == Terms.compound) {
+                                        AddArg(opstack, runner);
                                     } else {
                                         return runner.Complete(ReportError("Syntax error - function call has no function name at {0}",match));
                                     }
@@ -182,9 +183,10 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                 goto nextTerm;
                                 case Terms.comma:
                                     if (undecided.Term == Terms.identifier) {
+                                        AddArg(opstack, runner);
                                         runner.Add(new Instruction(Instructions.PushParam, undecided.Value));
                                         undecided = OpEntry.Empty;
-                                        AddArg(opstack, runner);
+                                        
                                     } else if (!undecided.IsEmpty) { // If this happend it will be our mistake. Nothing but identifiers should appear in the undecided
                                         return runner.Complete(ReportError("Internal error at {0}",undecided.Pos));
                                     }
@@ -263,9 +265,9 @@ namespace Ccf.Ck.SysPlugins.Support.ActionQuery
                                 goto nextTerm;
                                 case Terms.end:
                                     if (undecided.Term == Terms.identifier) {
+                                        AddArg(opstack, runner);
                                         runner.Add(new Instruction(Instructions.PushParam, undecided.Value));
                                         undecided = OpEntry.Empty;
-                                        AddArg(opstack, runner);
                                     }
                                     if (opstack.Count == 0) {
                                         // The stack must be empty at this point
