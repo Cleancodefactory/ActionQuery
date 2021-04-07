@@ -1,13 +1,21 @@
 # ActionQuery
 
-`Warning!` _This repository will be restructured and most likely split into two - the library and the example. It is possible that the repository will be removed and the code moved to the new ones. Please do not relay on its current form or its future existence._
-
-A little library for running simple scripts that command host objects in your code.
+A little library for running simple scripts that command host objects in your code. The methods of the host object are called as instructions of the script program enabling one to create scripts that use them in certain pattern, feeding the with parameters and obtaining result(s)
 
 ## Purpose
 
-Similar to ResolverExpression this library enables usage of simple scripts in configurations or from some input that command host objects in the main code.
+Similar to ResolverExpression this library enables usage of simple scripts in configurations or from some other input that command host objects in the main code.
 
+The need of such a mini language arises when the programmer wants to create in C# a programmable service and do that programming without the need to recompile any code. Recompiling or dynamic compilation is a valid way to go, but it brings with it a lot of complexity and cannot be justified except in very small number of cases. As an alternative a simple to host mini language can do the job and command huge number of tasks defined in configurations or even received in network requests.
+
+
+## Example
+
+There is an example project in [Example/acexample](Example/acexample) that is using the ActionQuery from console application that allows you to enter mini programs and execute them (with tracing).
+
+Please note that spaces and new lines are just ignored and unlike in the example the programs can be written in more relaxed fashion.
+
+Go to [example's readme](Example/acexample/Readme.md) for details about the example.
 ## Documentation
 
-_Will be added after the new structure is applied._
+_Will be here soon._
