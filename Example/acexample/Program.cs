@@ -1,5 +1,5 @@
 ﻿using System;
-using Ccf.Ck.SysPlugins.Support.ActionQuery;
+using Ccf.Ck.Libs.ActionQuery;
 
 namespace acexample
 {
@@ -8,13 +8,13 @@ namespace acexample
         static void Main(string[] args)
         {
             Host host = new Host();
-            host.Trace = true;
+            host.Trace = false;
             host.TraceSteps = 100;
             host.Parameters.Add("a", "string parameter a");
             host.Parameters.Add("b", "string parameter b");
 
             host.Parameters.Add("i", 10);
-            host.Parameters.Add("j", 100);
+            host.Parameters.Add("j", 0);
 
             host.Parameters.Add("x", 1.23);
             host.Parameters.Add("y", 0.56);
