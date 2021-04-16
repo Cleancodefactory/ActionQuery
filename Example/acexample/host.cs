@@ -36,7 +36,11 @@ namespace acexample
         }
         public ACValue Echo(ACValue[] values) {
             for (int i = 0; i < values.Length; i++) {
-                Console.WriteLine(values[i].Value);
+                if (values[i].Value == null) {
+                    Console.WriteLine($"echo: null");
+                } else {
+                    Console.WriteLine($"echo:{values[i].Value}");
+                }
             }
             return new ACValue(values.Length);
         }
@@ -124,11 +128,11 @@ namespace acexample
         private int _totalsteps = 1000;
         public int TraceSteps {get; set;} = 1000;
         public bool Trace {get;set;}
-        public bool StartTrace() {
+        public bool StartTrace(IEnumerable<Instruction> program) {
             _totalsteps = TraceSteps;
             return Trace;
         }
-        public bool Step(int pc, Instruction instruction, ACValue[] arguments, IEnumerable<ACValue> stack = null)
+        public bool Step(int pc, Instruction instruction, ACValue[] arguments, IEnumerable<ACValue> stack)
         {
             Console.WriteLine($"#{pc}: {instruction.Operation.ToString()}[{instruction.Operand}] ({String.Join(',',arguments.Select(v=>v.Value).Take(instruction.ArgumentsCount))})");
             Console.WriteLine($"\tST:{String.Join(' ',stack.Select(v=>v.Value).Reverse().Take(5))}");
