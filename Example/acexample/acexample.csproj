@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Src\ActionQuery\ActionQuery.csproj" />
+    <ProjectReference Include="..\..\Src\ActionQuery\Ccf.Ck.Libs.ActionQuery.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
