@@ -15,9 +15,15 @@ namespace acrun
 
             if (args.Length != 2) {
                 Console.WriteLine("usage acrun <script> <configuration>");
+                Console.WriteLine("Available functions in ac files are:");
+                Console.WriteLine("  Add(a,b)");
+                Console.WriteLine("  Equal(a,b)");
+                Console.WriteLine("  Not(a)");
+                Console.WriteLine("  Concat(a,b,c ...) as strings");
                 return;
             }
             try {
+                Console.WriteLine("Starting ...");
                 string script = File.ReadAllText(args[0]);
                 string conf = File.ReadAllText(args[1]);
                 Conf cfg = JsonSerializer.Deserialize<Conf>(conf);
@@ -28,6 +34,7 @@ namespace acrun
                 Host host = new Host(cfg);
                 ActionQueryRunner<ACValue> runner;
                 ActionQuery<ACValue> ac = new ActionQuery<ACValue>();
+                
                 runner = ac.Compile(script);
 
                 if (runner.ErrorText != null) {

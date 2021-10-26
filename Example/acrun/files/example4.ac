@@ -1,0 +1,6 @@
+$i(10),$s('digits:'),
+# Now cycle down to 0
+while( $i(Add($i,-1)),
+        $s(Concat ($s,$i)) # Concat buffer with another digit
+),
+Echo($s)
