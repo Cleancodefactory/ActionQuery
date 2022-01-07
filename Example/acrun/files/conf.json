@@ -1,0 +1,14 @@
+{
+    "Trace": false,
+    "TraceSteps": 100,
+    "HardLimit": 1000,
+    "DumpProgram": false,
+    "Parameters": {
+        "a": "A text parameter",
+        "b": "B text parameter",
+        "n":101,
+        "m":234,
+        "x":115.34,
+        "y":0.345
+    }
+}

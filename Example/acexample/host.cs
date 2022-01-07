@@ -111,6 +111,16 @@ namespace acexample
         {
             return new ACValue(arg);
         }
+        public ACValue GetVar(string varname) {
+            if (_vars.ContainsKey(varname)) {
+                return new ACValue(_vars[varname]);
+            }
+            return new ACValue();
+        }
+        public ACValue SetVar(string varname, ACValue val) {
+            _vars[varname] = val.Value;
+            return val;
+        }
 
         public bool IsTruthyOrFalsy(ACValue v)
         {
