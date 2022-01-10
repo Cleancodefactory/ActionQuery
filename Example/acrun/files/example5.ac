@@ -1,0 +1,18 @@
+
+$x('then '),$y('else '),
+Echo(
+    if (true,
+        Echo(
+            (
+                $z(Concat($x,'branch'))
+                Echo($z)
+                'THEN'
+            )
+        ),
+        (
+            $z(Concat($y,'branch')),
+            Echo($z),
+            'ELSE'
+        )
+    )
+)

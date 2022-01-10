@@ -1,0 +1,8 @@
+Echo($x('A'), $y('B'), Echo('C'), $z('D')),
+
+if (false,
+    (
+        Echo('then'), Echo($x), Echo($y),  Echo($z)
+    ),
+    Echo('else')
+)
